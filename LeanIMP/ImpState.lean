@@ -79,3 +79,19 @@ theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) 
                 contradiction -- contradiction, we are in the case where they are not equal
               | false =>
                 simp
+
+
+theorem IMPState.update_unrelated_eq_update_once (s : IMPState) (k1 k2: String) (v1 v2 : Int) (k1_neq_k2 : ¬(k1 = k2)) :
+  (IMPState.update (s.update k1 v1) k2 v2).lookup k1 = (s.update k1 v1).lookup k1 :=
+  by
+    unfold update
+    unfold List.lookup
+    simp
+    cases h_eq_bool : (k1 == k2) with
+      | true =>
+        have eq : k1 = k2 := by
+          apply decide_eq_true_iff.mp
+          exact h_eq_bool -- contradiction, we have an assumption that contradicts that
+        contradiction
+      | false =>
+        simp
