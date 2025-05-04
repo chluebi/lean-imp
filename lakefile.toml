@@ -1,0 +1,31 @@
+name = "lean-imp"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["lean-imp"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+autoImplicit = false
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[require]]
+name = "Qq"
+scope = "leanprover-community"
+
+[[require]]
+name = "Paperproof"
+git = "https://github.com/Paper-Proof/paperproof.git"
+subDir = "lean"
+rev = "main"
+
+
+[[lean_lib]]
+name = "LeanIMP"
+
+[[lean_exe]]
+name = "lean-imp"
+root = "Main"
+
