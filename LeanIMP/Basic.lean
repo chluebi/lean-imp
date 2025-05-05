@@ -7,6 +7,11 @@ def IMPState.lookup (s: IMPState) (key: String) :=
 def IMPState.update (s: IMPState) (key: String) (value: Int) :=
   (key, value) :: s
 
+def IMPState.does_not_contain (s: IMPState) (k: String) : Prop :=
+  match s with
+  | List.nil => True
+  | (a, _)::as => And (!(a = k)) (IMPState.does_not_contain as k)
+
 abbrev IMPComputation (α : Type) : Type := StateM IMPState α
 
 def addPair (key: String) (value: Int) : IMPComputation Unit := do
@@ -21,6 +26,15 @@ inductive IntExpr where
   | sub (_ _: IntExpr)
   | mul (_ _: IntExpr)
 
+def IntExpr.does_not_contain (expr: IntExpr) (s: String) : Prop :=
+  match expr with
+    | var (v:String) => !(v = s)
+    | const (_:Int) => True
+    | add (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | sub (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | mul (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+
+
 inductive BoolExpr where
   | var (_:String)
   | const (_:Bool)
@@ -33,6 +47,20 @@ inductive BoolExpr where
   | or (_ _: BoolExpr)
   | and (_ _: BoolExpr)
   | not (_: BoolExpr)
+
+def BoolExpr.does_not_contain (expr: BoolExpr) (s: String) : Prop :=
+  match expr with
+    | var (v:String) => !(v = s)
+    | const (_:Bool) => True
+    | eq (x : IntExpr) (y : IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | neq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | lt (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | leq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | gt (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | geq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | or (x : BoolExpr) (y: BoolExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | and (x : BoolExpr) (y: BoolExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | not (x : BoolExpr) => x.does_not_contain s
 
 
 inductive IMPProgram where
