@@ -1,16 +1,17 @@
 
 abbrev IMPState : Type := (List (String × Int))
 
-def IMPState.lookup (s: IMPState) (key: String) :=
-  List.find? (fun (x, _) => x == key) s >>= (fun (_, value) => some value)
-
 def IMPState.update (s: IMPState) (key: String) (value: Int) :=
   (key, value) :: s
+
+def IMPState.prepend_updates (s1 s2: IMPState) :=
+  List.foldr (fun (k, v) l  => IMPState.update l k v) s1 s2
+
 
 def IMPState.does_not_contain (s: IMPState) (k: String) : Prop :=
   match s with
   | List.nil => True
-  | (a, _)::as => And (!(a = k)) (IMPState.does_not_contain as k)
+  | (a, _)::as => And (Not (a = k)) (IMPState.does_not_contain as k)
 
 abbrev IMPComputation (α : Type) : Type := StateM IMPState α
 
