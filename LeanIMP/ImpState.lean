@@ -1,5 +1,4 @@
 import LeanIMP.Basic
-open Classical
 
 
 def IMPState.ext_eq (s1 s2 : IMPState) : Prop :=
@@ -43,9 +42,8 @@ theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) 
     by
       unfold ext_eq
       intros k
-      have h_lem : (k = k_update) ∨ ¬(k = k_update) := by apply em
-      cases h_lem with
-        | inl h_eq =>
+      cases h_lem_bool: k == k_update with
+        | true =>
           unfold lookup
           simp
           unfold update
@@ -54,12 +52,15 @@ theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) 
           cases h_eq_bool : (k_update == k) with
             | true => simp
             | false =>
-              rw [h_eq] at h_eq_bool
+              have h_lem : k = k_update := by
+                apply decide_eq_true_iff.mp
+                exact h_lem_bool
+              rw [h_lem] at h_eq_bool
               conv at h_eq_bool =>
                 lhs
                 rw [beq_self_eq_true]
               contradiction -- contradiction, we are in the case where they are equal
-        | inr h_neq =>
+        | false =>
           unfold lookup
           simp
           unfold update
