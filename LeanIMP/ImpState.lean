@@ -141,3 +141,58 @@ theorem IMPState.update_unrelated_eq_update_list (s1 s2 : IMPState) (k: String) 
       rw [<- IMPState.prepend_update_eq_reverse_Happend]
       apply ih
       exact s2_does_not_contain.right
+
+
+theorem IMPState.skip_does_not_affect_state (s: IMPState) (p: IMPProgram) (p_is_skip : p = IMPProgram.skip) :
+  IMPProgram.run p s = s :=
+  by
+    unfold IMPProgram.run
+    simp
+    unfold IMPProgram.runProgram
+    unfold StateT.run
+    rw [p_is_skip]
+    eq_refl
+
+theorem IMPState.eval_int_is_pure (s: IMPState) (expr : IntExpr) :
+  (evalIntExpr expr) s = (((evalIntExpr expr) s).fst, s) :=
+  by
+    induction expr generalizing s with
+    | var key =>
+      simp [evalIntExpr]
+      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      match List.lookup key s with
+        | none => eq_refl
+        | some _ => eq_refl
+    | const c =>
+      simp [evalIntExpr]
+      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      eq_refl
+    | add a b ih_a ih_b
+    | sub a b ih_a ih_b
+    | mul a b ih_a ih_b =>
+      simp [evalIntExpr]
+      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      rw [ih_a s]
+      conv =>
+        arg 1
+        dsimp
+      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      rw [ih_b s]
+
+
+theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : IntExpr} (s: IMPState) (k: String) (p: IMPProgram) (p_is_assign : p = IMPProgram.assign k_assign expr) (k_neq : ¬(k = k_assign)) :
+  (IMPProgram.run p s).lookup k = s.lookup k :=
+  by
+    unfold IMPProgram.run
+    simp
+    unfold IMPProgram.runProgram
+    unfold StateT.run
+    rw [p_is_assign]
+    simp
+    simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind]
+    match (evalIntExpr expr s) with
+      | (value, new_state) =>
+        simp
+        unfold addPair
+        simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+        exact IMPState.update_unrelated_eq_update_once s k k_assign value k_neq

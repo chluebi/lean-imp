@@ -134,7 +134,28 @@ def evalBoolExpr : BoolExpr → IMPComputation Bool
     let res ← evalBoolExpr b
     pure (!res)
 
-partial def runProgram : IMPProgram → IMPComputation Unit
+def IMPProgram.runProgram : IMPProgram → IMPComputation Unit
+  | IMPProgram.skip => pure ()
+  | IMPProgram.assign varName expr => do
+    let value ← evalIntExpr expr
+    addPair varName value
+  | IMPProgram.seq p1 p2 => do
+    runProgram p1
+    runProgram p2
+  | IMPProgram.«if» cond thenP elseP => do
+    let condition ← evalBoolExpr cond
+    if condition then
+      runProgram thenP
+    else
+      runProgram elseP
+  | IMPProgram.«while» cond body => do
+    let condition ← evalBoolExpr cond
+    unless (not condition) do
+      runProgram body
+      runProgram (IMPProgram.«while» cond body)
+decreasing_by all_goals sorry
+
+partial def IMPProgram.runProgramPartial : IMPProgram → IMPComputation Unit
   | IMPProgram.skip => pure ()
   | IMPProgram.assign varName expr => do
     let value ← evalIntExpr expr
@@ -154,6 +175,23 @@ partial def runProgram : IMPProgram → IMPComputation Unit
       runProgram body
       runProgram (IMPProgram.«while» cond body)
 
-def run (program: IMPProgram) :=
-  let (_, state) := (runProgram program).run [] |>.run
+
+def IMPProgram.run (program: IMPProgram) (state: IMPState) :=
+  let (_, state) := (runProgram program).run state |>.run
   state
+
+def IMPProgram.runPartial (program: IMPProgram) (state: IMPState) :=
+  let (_, state) := (runProgramPartial program).run state |>.run
+  state
+
+def factorialProgram : IMPProgram :=
+  IMPProgram.seq (IMPProgram.assign "n" (IntExpr.const 3)) -- n := 3
+  (IMPProgram.seq (IMPProgram.assign "result" (IntExpr.const 1)) -- result := 1
+    (IMPProgram.«while» (BoolExpr.gt (IntExpr.var "n") (IntExpr.const 0)) -- while n > 0
+      (IMPProgram.seq (IMPProgram.assign "result" (IntExpr.mul (IntExpr.var "result") (IntExpr.var "n"))) -- result := result * n
+           (IMPProgram.assign "n" (IntExpr.sub (IntExpr.var "n") (IntExpr.const 1))) -- n := n - 1
+      )
+    )
+  )
+
+#eval! (factorialProgram.runPartial []).lookup "result"
