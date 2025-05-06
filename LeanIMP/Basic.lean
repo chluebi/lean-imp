@@ -161,19 +161,19 @@ partial def IMPProgram.runProgramPartial : IMPProgram → IMPComputation Unit
     let value ← evalIntExpr expr
     addPair varName value
   | IMPProgram.seq p1 p2 => do
-    runProgram p1
-    runProgram p2
+    runProgramPartial p1
+    runProgramPartial p2
   | IMPProgram.«if» cond thenP elseP => do
     let condition ← evalBoolExpr cond
     if condition then
-      runProgram thenP
+      runProgramPartial thenP
     else
-      runProgram elseP
+      runProgramPartial elseP
   | IMPProgram.«while» cond body => do
     let condition ← evalBoolExpr cond
     unless (not condition) do
-      runProgram body
-      runProgram (IMPProgram.«while» cond body)
+      runProgramPartial body
+      runProgramPartial (IMPProgram.«while» cond body)
 
 
 def IMPProgram.run (program: IMPProgram) (state: IMPState) :=
@@ -194,4 +194,4 @@ def factorialProgram : IMPProgram :=
     )
   )
 
-#eval! (factorialProgram.runPartial []).lookup "result"
+#eval (factorialProgram.runPartial []).lookup "result"
