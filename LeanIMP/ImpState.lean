@@ -153,30 +153,33 @@ theorem IMPState.skip_does_not_affect_state (s: IMPState) (p: IMPProgram) (p_is_
     rw [p_is_skip]
     eq_refl
 
+macro "simp_monad" : tactic =>
+  `(tactic| simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run])
+
 theorem IMPState.eval_int_is_pure (s: IMPState) (expr : IntExpr) :
   (evalIntExpr expr) s = (((evalIntExpr expr) s).fst, s) :=
   by
     induction expr generalizing s with
     | var key =>
       simp [evalIntExpr]
-      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      simp_monad
       match List.lookup key s with
         | none => eq_refl
         | some _ => eq_refl
     | const c =>
       simp [evalIntExpr]
-      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      simp_monad
       eq_refl
     | add a b ih_a ih_b
     | sub a b ih_a ih_b
     | mul a b ih_a ih_b =>
       simp [evalIntExpr]
-      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      simp_monad
       rw [ih_a s]
       conv =>
         arg 1
         dsimp
-      simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+      simp_monad
       rw [ih_b s]
 
 
@@ -189,11 +192,10 @@ theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : In
     unfold StateT.run
     rw [p_is_assign]
     simp
-    simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind]
+    simp_monad
     conv =>
       arg 1
       arg 2
-      arg 1
       arg 1
       rw [eval_int_is_pure]
       dsimp
@@ -201,5 +203,5 @@ theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : In
       | (value, new_state) =>
         simp
         unfold addPair
-        simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run]
+        simp_monad
         exact IMPState.update_unrelated_eq_update_once s k k_assign value k_neq
