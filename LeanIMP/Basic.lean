@@ -1,7 +1,7 @@
 
-abbrev IMPState : Type := (List (String × Int))
+abbrev IMPState : Type := (List (String × Nat))
 
-def IMPState.update (s: IMPState) (key: String) (value: Int) :=
+def IMPState.update (s: IMPState) (key: String) (value: Nat) :=
   (key, value) :: s
 
 def IMPState.prepend_updates (s1 s2: IMPState) :=
@@ -15,36 +15,36 @@ def IMPState.does_not_contain (s: IMPState) (k: String) : Prop :=
 
 abbrev IMPComputation (α : Type) : Type := StateM IMPState α
 
-def addPair (key: String) (value: Int) : IMPComputation Unit := do
+def addPair (key: String) (value: Nat) : IMPComputation Unit := do
   let s ← get
   set (s.update key value)
 
 
-inductive IntExpr where
+inductive NatExpr where
   | var (_:String)
-  | const (_:Int)
-  | add (_ _: IntExpr)
-  | sub (_ _: IntExpr)
-  | mul (_ _: IntExpr)
+  | const (_:Nat)
+  | add (_ _: NatExpr)
+  | sub (_ _: NatExpr)
+  | mul (_ _: NatExpr)
 
-def IntExpr.does_not_contain (expr: IntExpr) (s: String) : Prop :=
+def NatExpr.does_not_contain (expr: NatExpr) (s: String) : Prop :=
   match expr with
     | var (v:String) => !(v = s)
-    | const (_:Int) => True
-    | add (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | sub (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | mul (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | const (_:Nat) => True
+    | add (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | sub (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | mul (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
 
 
 inductive BoolExpr where
   | var (_:String)
   | const (_:Bool)
-  | eq (_ _: IntExpr)
-  | neq (_ _: IntExpr)
-  | lt (_ _: IntExpr)
-  | leq (_ _: IntExpr)
-  | gt (_ _: IntExpr)
-  | geq (_ _: IntExpr)
+  | eq (_ _: NatExpr)
+  | neq (_ _: NatExpr)
+  | lt (_ _: NatExpr)
+  | leq (_ _: NatExpr)
+  | gt (_ _: NatExpr)
+  | geq (_ _: NatExpr)
   | or (_ _: BoolExpr)
   | and (_ _: BoolExpr)
   | not (_: BoolExpr)
@@ -53,12 +53,12 @@ def BoolExpr.does_not_contain (expr: BoolExpr) (s: String) : Prop :=
   match expr with
     | var (v:String) => !(v = s)
     | const (_:Bool) => True
-    | eq (x : IntExpr) (y : IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | neq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | lt (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | leq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | gt (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
-    | geq (x : IntExpr) (y: IntExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | eq (x : NatExpr) (y : NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | neq (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | lt (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | leq (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | gt (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
+    | geq (x : NatExpr) (y: NatExpr) => And (x.does_not_contain s) (y.does_not_contain s)
     | or (x : BoolExpr) (y: BoolExpr) => And (x.does_not_contain s) (y.does_not_contain s)
     | and (x : BoolExpr) (y: BoolExpr) => And (x.does_not_contain s) (y.does_not_contain s)
     | not (x : BoolExpr) => x.does_not_contain s
@@ -66,30 +66,30 @@ def BoolExpr.does_not_contain (expr: BoolExpr) (s: String) : Prop :=
 
 inductive IMPProgram where
   | skip
-  | assign (var: String) (expr: IntExpr)
+  | assign (var: String) (expr: NatExpr)
   | seq (_ _: IMPProgram)
   | «if» (_: BoolExpr) (_ _: IMPProgram)
   | «while» (_: BoolExpr) (_: IMPProgram)
 
 
-def evalIntExpr : IntExpr → IMPComputation Int
-  | IntExpr.var varName => do
+def evalNatExpr : NatExpr → IMPComputation Nat
+  | NatExpr.var varName => do
     let s ← get
     match s.lookup varName with
     | some value => pure value
     | none => pure 0
-  | IntExpr.const n => pure n
-  | IntExpr.add e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
+  | NatExpr.const n => pure n
+  | NatExpr.add e1 e2 => do
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
     pure (n1 + n2)
-  | IntExpr.sub e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
+  | NatExpr.sub e1 e2 => do
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
     pure (n1 - n2)
-  | IntExpr.mul e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
+  | NatExpr.mul e1 e2 => do
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
     pure (n1 * n2)
 
 def evalBoolExpr : BoolExpr → IMPComputation Bool
@@ -101,29 +101,29 @@ def evalBoolExpr : BoolExpr → IMPComputation Bool
     | none => pure true
   | BoolExpr.const b => pure b
   | BoolExpr.eq e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
     pure (n1 == n2)
   | BoolExpr.neq e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
     pure (n1 != n2)
   | BoolExpr.lt e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
-    pure (n1 < n2)
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
+    pure (decide (n1 < n2))
   | BoolExpr.leq e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
-    pure (n1 ≤ n2)
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
+    pure (decide (n1 ≤ n2))
   | BoolExpr.gt e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
-    pure (n1 > n2)
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
+    pure (decide (n1 > n2))
   | BoolExpr.geq e1 e2 => do
-    let n1 ← evalIntExpr e1
-    let n2 ← evalIntExpr e2
-    pure (n1 ≥ n2)
+    let n1 ← evalNatExpr e1
+    let n2 ← evalNatExpr e2
+    pure (decide (n1 ≥ n2))
   | BoolExpr.or b1 b2 => do
     let res1 ← evalBoolExpr b1
     if res1 then pure true else evalBoolExpr b2
@@ -137,7 +137,7 @@ def evalBoolExpr : BoolExpr → IMPComputation Bool
 def IMPProgram.runProgram : IMPProgram → IMPComputation Unit
   | IMPProgram.skip => pure ()
   | IMPProgram.assign varName expr => do
-    let value ← evalIntExpr expr
+    let value ← evalNatExpr expr
     addPair varName value
   | IMPProgram.seq p1 p2 => do
     runProgram p1
@@ -150,7 +150,7 @@ def IMPProgram.runProgram : IMPProgram → IMPComputation Unit
       runProgram elseP
   | IMPProgram.«while» cond body => do
     let condition ← evalBoolExpr cond
-    unless (not condition) do
+    if (condition) then
       runProgram body
       runProgram (IMPProgram.«while» cond body)
 decreasing_by all_goals sorry
@@ -158,7 +158,7 @@ decreasing_by all_goals sorry
 partial def IMPProgram.runProgramPartial : IMPProgram → IMPComputation Unit
   | IMPProgram.skip => pure ()
   | IMPProgram.assign varName expr => do
-    let value ← evalIntExpr expr
+    let value ← evalNatExpr expr
     addPair varName value
   | IMPProgram.seq p1 p2 => do
     runProgramPartial p1
@@ -185,13 +185,31 @@ def IMPProgram.runPartial (program: IMPProgram) (state: IMPState) :=
   state
 
 def factorialProgram : IMPProgram :=
-  IMPProgram.seq (IMPProgram.assign "n" (IntExpr.const 3)) -- n := 3
-  (IMPProgram.seq (IMPProgram.assign "result" (IntExpr.const 1)) -- result := 1
-    (IMPProgram.«while» (BoolExpr.gt (IntExpr.var "n") (IntExpr.const 0)) -- while n > 0
-      (IMPProgram.seq (IMPProgram.assign "result" (IntExpr.mul (IntExpr.var "result") (IntExpr.var "n"))) -- result := result * n
-           (IMPProgram.assign "n" (IntExpr.sub (IntExpr.var "n") (IntExpr.const 1))) -- n := n - 1
+  IMPProgram.seq (IMPProgram.assign "n" (NatExpr.const 3)) -- n := 3
+  (IMPProgram.seq (IMPProgram.assign "result" (NatExpr.const 1)) -- result := 1
+    (IMPProgram.«while» (BoolExpr.gt (NatExpr.var "n") (NatExpr.const 0)) -- while n > 0
+      (IMPProgram.seq (IMPProgram.assign "result" (NatExpr.mul (NatExpr.var "result") (NatExpr.var "n"))) -- result := result * n
+           (IMPProgram.assign "n" (NatExpr.sub (NatExpr.var "n") (NatExpr.const 1))) -- n := n - 1
       )
     )
   )
 
 #eval (factorialProgram.runPartial []).lookup "result"
+
+
+def whileLoopBase (N_val: Nat) : IMPProgram :=
+  (IMPProgram.«while»
+        (BoolExpr.lt (NatExpr.var "x") (NatExpr.const (N_val))) -- condition: x < N
+        (IMPProgram.assign "x" (NatExpr.add (NatExpr.var "x") (NatExpr.const 1))) -- body: x := x + 1
+      )
+
+def whileLoopProgram (N_val: Nat) : IMPProgram :=
+  (IMPProgram.seq
+    (IMPProgram.assign "x" (NatExpr.const 0)) -- x := 0
+    (whileLoopBase N_val)
+  )
+
+
+#eval ((whileLoopProgram 1000).runPartial []).lookup "x"
+
+#reduce evalNatExpr (NatExpr.const (1)) []

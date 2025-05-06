@@ -37,7 +37,7 @@ instance : Equivalence IMPState.ext_eq where
   trans := IMPState.ext_eq_transitive
 
 
-theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) (v1 v2 : Int) :
+theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) (v1 v2 : Nat) :
   IMPState.ext_eq (IMPState.update (s.update k_update v1) k_update v2) (s.update k_update v2) :=
     by
       unfold ext_eq
@@ -64,7 +64,7 @@ theorem IMPState.update_twice_eq_update_once (s : IMPState) (k_update : String) 
               rw [List.lookup]
 
 
-theorem IMPState.update_unrelated_eq_update_once (s : IMPState) (k1 k2: String) (v2 : Int) (k1_neq_k2 : ¬(k1 = k2)) :
+theorem IMPState.update_unrelated_eq_update_once (s : IMPState) (k1 k2: String) (v2 : Nat) (k1_neq_k2 : ¬(k1 = k2)) :
   (IMPState.update s k2 v2).lookup k1 = s.lookup k1 :=
   by
     unfold update
@@ -154,26 +154,25 @@ theorem IMPState.skip_does_not_affect_state (s: IMPState) (p: IMPProgram) (p_is_
     eq_refl
 
 macro "simp_monad" : tactic =>
-  `(tactic| simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run])
+  `(tactic| simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run])
 
-theorem IMPState.eval_int_is_pure (s: IMPState) (expr : IntExpr) :
-  (evalIntExpr expr) s = (((evalIntExpr expr) s).fst, s) :=
+theorem IMPState.eval_int_is_pure (s: IMPState) (expr : NatExpr) :
+  (evalNatExpr expr) s = (((evalNatExpr expr) s).fst, s) :=
   by
     induction expr generalizing s with
     | var key =>
-      simp [evalIntExpr]
+      simp [evalNatExpr]
       simp_monad
       match List.lookup key s with
         | none => eq_refl
         | some _ => eq_refl
     | const c =>
-      simp [evalIntExpr]
+      simp [evalNatExpr]
       simp_monad
-      eq_refl
     | add a b ih_a ih_b
     | sub a b ih_a ih_b
     | mul a b ih_a ih_b =>
-      simp [evalIntExpr]
+      simp [evalNatExpr]
       simp_monad
       rw [ih_a s]
       conv =>
@@ -183,7 +182,7 @@ theorem IMPState.eval_int_is_pure (s: IMPState) (expr : IntExpr) :
       rw [ih_b s]
 
 
-theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : IntExpr} (s: IMPState) (k: String) (p: IMPProgram) (p_is_assign : p = IMPProgram.assign k_assign expr) (k_neq : ¬(k = k_assign)) :
+theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : NatExpr} (s: IMPState) (k: String) (p: IMPProgram) (p_is_assign : p = IMPProgram.assign k_assign expr) (k_neq : ¬(k = k_assign)) :
   (IMPProgram.run p s).lookup k = s.lookup k :=
   by
     unfold IMPProgram.run
@@ -199,9 +198,55 @@ theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : In
       arg 1
       rw [eval_int_is_pure]
       dsimp
-    match (evalIntExpr expr s) with
+    match (evalNatExpr expr s) with
       | (value, new_state) =>
         simp
         unfold addPair
         simp_monad
         exact IMPState.update_unrelated_eq_update_once s k k_assign value k_neq
+
+
+
+theorem IMPProgram.seq_assoc (a b c: IMPProgram) :
+  IMPProgram.run (IMPProgram.seq a (IMPProgram.seq b c)) = IMPProgram.run (IMPProgram.seq (IMPProgram.seq a b) c) :=
+  by
+    unfold IMPProgram.run
+    simp_monad
+    unfold runProgram
+    simp_monad
+    apply funext
+    intros s
+    conv =>
+      arg 1
+      change ((b.seq c).runProgram (a.runProgram s).snd).snd
+    conv =>
+      arg 2
+      change (c.runProgram ((a.seq b).runProgram s).snd).snd
+    conv =>
+      arg 1
+      unfold runProgram
+    simp_monad
+    conv =>
+      arg 1
+      change (c.runProgram (b.runProgram (a.runProgram s).snd).snd).snd
+    conv =>
+      arg 2
+      arg 1
+      arg 2
+      arg 1
+      unfold runProgram
+    simp_monad
+    conv =>
+      arg 2
+      arg 1
+      arg 2
+      change (b.runProgram (a.runProgram s).snd).snd
+
+theorem zero_difference_is_lt (a b : Nat) : a < b <-> b - a > 0  := by
+  constructor
+
+  intro h
+  apply Nat.sub_pos_of_lt h
+
+  intro h
+  apply Nat.lt_of_sub_pos h
