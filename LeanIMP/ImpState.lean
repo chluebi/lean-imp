@@ -190,6 +190,13 @@ theorem IMPState.assign_to_other_not_affect_state {k_assign : String} {expr : In
     rw [p_is_assign]
     simp
     simp [Bind.bind, Monad.toBind, StateT.instMonad, StateT.bind]
+    conv =>
+      arg 1
+      arg 2
+      arg 1
+      arg 1
+      rw [eval_int_is_pure]
+      dsimp
     match (evalIntExpr expr s) with
       | (value, new_state) =>
         simp
