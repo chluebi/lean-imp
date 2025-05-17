@@ -197,16 +197,16 @@ def factorialProgram : IMPProgram :=
 #eval (factorialProgram.runPartial []).lookup "result"
 
 
-def whileLoopBase (N_val: Nat) : IMPProgram :=
+def whileLoopBase  : IMPProgram :=
   (IMPProgram.«while»
-        (BoolExpr.lt (NatExpr.var "x") (NatExpr.const (N_val))) -- condition: x < N
-        (IMPProgram.assign "x" (NatExpr.add (NatExpr.var "x") (NatExpr.const 1))) -- body: x := x + 1
+        (BoolExpr.gt (NatExpr.var "x") (NatExpr.const (0))) -- condition: x > 0
+        (IMPProgram.assign "x" (NatExpr.sub (NatExpr.var "x") (NatExpr.const 1))) -- body: x := x - 1
       )
 
 def whileLoopProgram (N_val: Nat) : IMPProgram :=
   (IMPProgram.seq
-    (IMPProgram.assign "x" (NatExpr.const 0)) -- x := 0
-    (whileLoopBase N_val)
+    (IMPProgram.assign "x" (NatExpr.const N_val)) -- x := N
+    (whileLoopBase)
   )
 
 
