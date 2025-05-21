@@ -7,19 +7,11 @@ defaultTargets = ["lean-imp"]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 autoImplicit = false
 
-[[require]]
-name = "mathlib"
-scope = "leanprover-community"
 
 [[require]]
-name = "Qq"
-scope = "leanprover-community"
-
-[[require]]
-name = "Paperproof"
-git = "https://github.com/Paper-Proof/paperproof.git"
-subDir = "lean"
-rev = "main"
+name = "Canonical"
+scope = "chasenorman"
+rev = "v4.20.0-rc3"
 
 
 [[lean_lib]]
