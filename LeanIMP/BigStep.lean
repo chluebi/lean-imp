@@ -12,6 +12,8 @@ def IMPProgram.big_step_ext_eq {α: Type} [BEq α] (p1 p2 : IMPProgram α) : Pro
   ∧
   (forall (s_end2 : IMPState α), BigStep p2 s s_end2 -> (exists s_end1 : IMPState α, And (IMPState.ext_eq s_end2 s_end1) (BigStep p1 s s_end1)))
 
+
+
 theorem IMPProgram.big_step_ext_eq_reflexive {α: Type} [BEq α] (p : IMPProgram α) : IMPProgram.big_step_ext_eq p p :=
   by
     intro s
@@ -73,10 +75,17 @@ theorem IMPProgram.big_step_ext_eq_transitive {α: Type} [BEq α] {p1 p2 p3 : IM
     exact (pw2.right)
 
 
-instance {α: Type} [beq: BEq α] : Equivalence (@IMPProgram.big_step_ext_eq α beq) where
+instance IMPProgramEquivalence {α: Type} [beq: BEq α] : Equivalence (@IMPProgram.big_step_ext_eq α beq) where
   refl := IMPProgram.big_step_ext_eq_reflexive
   symm := IMPProgram.big_step_ext_eq_symmetric
   trans := IMPProgram.big_step_ext_eq_transitive
+
+instance IMPProgramSetoid (α: Type) [BEq α] : Setoid (IMPProgram α) where
+  r := IMPProgram.big_step_ext_eq
+  iseqv := IMPProgramEquivalence
+
+def IMPProgramQ (α: Type) [BEq α] := Quotient (IMPProgramSetoid α)
+
 
 macro "simp_monad_and_expr" : tactic =>
   `(tactic| simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr])

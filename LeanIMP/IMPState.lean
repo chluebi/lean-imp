@@ -32,37 +32,46 @@ theorem IMPState.ext_eq_transitive {α: Type} [BEq α] {s1 s2 s3 : IMPState α} 
     apply ass2
 
 
-instance {α: Type} [beq : BEq α] : Equivalence (@IMPState.ext_eq α beq) where
+instance IMPStateEquivalence {α: Type} [beq : BEq α] : Equivalence (@IMPState.ext_eq α beq) where
   refl := IMPState.ext_eq_reflexive
   symm := IMPState.ext_eq_symmetric
   trans := IMPState.ext_eq_transitive
 
 
+instance IMPStateSetoid (α: Type) [BEq α] : Setoid (IMPState α) where
+  r := IMPState.ext_eq
+  iseqv := IMPStateEquivalence
+
+def IMPStateQ (α: Type) [BEq α] := Quotient (IMPStateSetoid α)
+
+
 theorem IMPState.update_twice_eq_update_once {α: Type} [BEq α] (s : IMPState α) (k_update : α) (v1 v2 : Nat) :
-  IMPState.ext_eq (IMPState.update (s.update k_update v1) k_update v2) (s.update k_update v2) :=
+  Quotient.mk' (IMPState.update (s.update k_update v1) k_update v2) = Quotient.mk' (s.update k_update v2) :=
     by
-      unfold ext_eq
-      intros k
-      cases h_lem_bool: k == k_update with
-        | true =>
-          unfold List.lookup
-          unfold update
-          simp
-          rw [h_lem_bool]
-        | false =>
-          unfold List.lookup
-          unfold update
-          simp
-          rw [h_lem_bool]
-          simp
-          unfold List.lookup
-          rw [h_lem_bool]
-          simp
-          match s with
-            | List.nil => simp
-            | List.cons head tail =>
-              simp
-              rw [List.lookup]
+      have is_ext_eq : ext_eq (IMPState.update (s.update k_update v1) k_update v2) (s.update k_update v2) := by
+        intros k
+        cases h_lem_bool: k == k_update with
+          | true =>
+            unfold List.lookup
+            unfold update
+            simp
+            rw [h_lem_bool]
+          | false =>
+            unfold List.lookup
+            unfold update
+            simp
+            rw [h_lem_bool]
+            simp
+            unfold List.lookup
+            rw [h_lem_bool]
+            simp
+            match s with
+              | List.nil => simp
+              | List.cons head tail =>
+                simp
+                rw [List.lookup]
+
+      exact Quotient.sound is_ext_eq
 
 
 theorem IMPState.update_unrelated_eq_update_once {α: Type} [BEq α] (s : IMPState α) (k1 k2: α) (v2 : Nat) (k1_neq_k2 : ¬(k1 == k2)) :
