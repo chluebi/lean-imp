@@ -1,6 +1,9 @@
 
 abbrev IMPState (α: Type) [BEq α] : Type := (List (α × Nat))
 
+instance (α: Type) [BEq α] : Inhabited (IMPState α) where
+  default := []
+
 def IMPState.update {α: Type} [BEq α] (s: IMPState α) (key: α) (value: Nat) :=
   (key, value) :: s
 

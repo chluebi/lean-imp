@@ -5,7 +5,7 @@ inductive Identifier where
   | N
   | result
   | x
-deriving BEq, Repr
+deriving BEq, Repr, Inhabited
 
 instance : PartialEquivBEq Identifier where
   symm := by

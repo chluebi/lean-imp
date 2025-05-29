@@ -175,3 +175,67 @@ theorem IMPState.eval_int_is_pure {α: Type} [BEq α] (s: IMPState α) (expr : N
         dsimp
       simp_monad
       rw [ih_b s]
+
+
+theorem IMPState.eval_bool_is_pure {α: Type} [BEq α] (s: IMPState α) (expr : BoolExpr α) :
+  (evalBoolExpr expr) s = (((evalBoolExpr expr) s).fst, s) :=
+  by
+    induction expr generalizing s with
+    | var key =>
+      simp [evalBoolExpr]
+      simp_monad
+      match List.lookup key s with
+        | none => eq_refl
+        | some val =>
+          match h: val with
+            | 0 =>
+              rfl
+            | Nat.succ n =>
+              rfl
+    | const c =>
+      simp  [evalBoolExpr]
+      simp_monad
+    | eq a b
+    | neq a b
+    | lt a b
+    | leq a b
+    | gt a b
+    | geq  =>
+      simp [evalBoolExpr]
+      simp_monad
+      rw [eval_int_is_pure]
+      simp
+      rw [eval_int_is_pure]
+    | and a b ih_a ih_b =>
+      simp [evalBoolExpr]
+      simp_monad
+      rw [ih_a s]
+      conv =>
+        arg 1
+        dsimp
+      simp_monad
+      match (evalBoolExpr a s) with
+        | (true, _) =>
+          simp
+          exact (ih_b s)
+        | (false, _) =>
+          simp_monad
+    | or a b ih_a ih_b =>
+      simp [evalBoolExpr]
+      simp_monad
+      rw [ih_a s]
+      conv =>
+        arg 1
+        dsimp
+      simp_monad
+      match (evalBoolExpr a s) with
+        | (true, _) =>
+          simp
+          simp_monad
+        | (false, _) =>
+          simp
+          exact (ih_b s)
+    | not a ih_a =>
+      simp [evalBoolExpr]
+      simp_monad
+      rw [ih_a s]

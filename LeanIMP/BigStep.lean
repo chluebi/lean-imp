@@ -262,54 +262,81 @@ def whileLoopBigStepExists (N_val : Nat) :
 #eval (whileLoopBigStepExists 3).fst
 
 
+instance (α: Type) [BEq α] [Inhabited (IMPState α)] (p: IMPProgram α) (s_start: IMPState α) : Inhabited (Σ' s_final : IMPState α, BigStep p s_start s_final) where
+  default := ⟨s_start, sorry⟩
 
 
-
-
-theorem whileLoopBase2_terminates_at_N (N_val_current N_val : Nat) (s s_final : IMPState Identifier) :
-  N_val_current <= N_val ->
-  s.lookup Identifier.x = some N_val_current ->
-  BigStep (whileLoopBase2 N_val) s s_final ->
-  s_final.lookup Identifier.x = some N_val :=
+def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgram α) (s_start: IMPState α) :
+  Σ' s_final : IMPState α, BigStep p s_start s_final :=
     by
-      intros N_val_current_less
-      intros x_is_N_val
-      intros h_big_step
-      cases h_big_step with
-        | bs_while_false _ _ _ h_not_less =>
-          conv at h_not_less =>
-            simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr]
-            rw [x_is_N_val]
-            simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr]
-          injection h_not_less with is_leq _
-          have is_leq : ¬ (N_val_current < N_val) := of_decide_false is_leq
-          have is_leq : (N_val_current >= N_val) := Nat.ge_of_not_lt is_leq
-          have is_eq : (N_val_current = N_val) := Nat.le_antisymm N_val_current_less is_leq
-          rw [is_eq] at x_is_N_val
-          exact x_is_N_val
-        | bs_while_true _ _ _ mid2 _ h_less h_body h_next_while =>
-          conv at h_less =>
-            simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr]
-            rw [x_is_N_val]
-            simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr]
-          injection h_less with is_lt _
-          have is_lt : (N_val_current < N_val) := of_decide_true is_lt
-          have is_leq : (1 + N_val_current <= N_val) := Nat.one_add_le_iff.mpr is_lt
-          rw [Nat.add_comm] at is_leq
+      match p with
+        | IMPProgram.skip => exact ⟨s_start, BigStep.bs_skip s_start⟩
+        | IMPProgram.assign x expr =>
+          let next := (evalNatExpr expr).run s_start
+          let next_val := next.fst
+          let next_state := s_start.update x next_val
+          have next_is_next : (evalNatExpr expr).run s_start = (next_val, s_start) := by
+            simp_monad
+            rw [IMPState.eval_int_is_pure]
+            rfl
+          refine ⟨?s_final, ?_⟩
+          exact next_state
+          have h := BigStep.bs_assign x expr s_start next_val next_is_next
+          simp [next_state] at h
+          exact h
 
-          have mid2_is_minus_one : mid2.lookup Identifier.x = some (N_val_current + 1) := assigning_plus_one "x" s mid2 N_val_current x_is_N_val h_body
-          exact (whileLoopBase2_terminates_at_N (N_val_current + 1) N_val mid2 s_final is_leq (mid2_is_minus_one) (h_next_while))
+        | IMPProgram.seq p1 p2 =>
+          let ⟨s1, bs1⟩ := runBigStep p1 s_start
+          let ⟨s2, bs2⟩ := runBigStep p2 s1
+          exact ⟨s2, BigStep.bs_seq p1 p2 s_start s1 s2 bs1 bs2⟩
+
+        | IMPProgram.«if» bexpr if_body else_body =>
+          match h : evalBoolExpr bexpr s_start with
+            | (true, s) =>
+              rw [IMPState.eval_bool_is_pure] at h
+              let next := (evalBoolExpr bexpr).run s_start
+              have next_is_next : (evalBoolExpr bexpr).run s_start = (true, s_start) := by
+                simp_monad
+                rw [IMPState.eval_bool_is_pure]
+                injection h with h1 h2
+                congr
+              let ⟨s_if, bs_if⟩ := runBigStep if_body s_start
+              exact ⟨s_if, BigStep.bs_if_true bexpr if_body else_body s_start s_if next_is_next bs_if⟩
+
+            | (false, s) =>
+              rw [IMPState.eval_bool_is_pure] at h
+              let next := (evalBoolExpr bexpr).run s_start
+              have next_is_next : (evalBoolExpr bexpr).run s_start = (false, s_start) := by
+                simp_monad
+                rw [IMPState.eval_bool_is_pure]
+                injection h with h1 h2
+                congr
+              let ⟨s_if, bs_if⟩ := runBigStep else_body s_start
+              exact ⟨s_if, BigStep.bs_if_false bexpr if_body else_body s_start s_if next_is_next bs_if⟩
+
+        | IMPProgram.«while» bexpr body =>
+          match h : evalBoolExpr bexpr s_start with
+            | (true, s) =>
+              rw [IMPState.eval_bool_is_pure] at h
+              let next := (evalBoolExpr bexpr).run s_start
+              have next_is_next : (evalBoolExpr bexpr).run s_start = (true, s_start) := by
+                simp_monad
+                rw [IMPState.eval_bool_is_pure]
+                injection h with h1 h2
+                congr
+              let ⟨s_body, bs_body⟩ := runBigStep body s_start
+              let ⟨s_next, bs_next⟩ := runBigStep (IMPProgram.«while» bexpr body) s_body
+              exact ⟨s_next, BigStep.bs_while_true bexpr body s_start s_body s_next next_is_next bs_body bs_next⟩
+            | (false, s) =>
+              rw [IMPState.eval_bool_is_pure] at h
+              let next := (evalBoolExpr bexpr).run s_start
+              have next_is_next : (evalBoolExpr bexpr).run s_start = (false, s_start) := by
+                simp_monad
+                rw [IMPState.eval_bool_is_pure]
+                injection h with h1 h2
+                congr
+              exact ⟨s_start, BigStep.bs_while_false bexpr body s_start next_is_next⟩
+decreasing_by all_goals sorry
 
 
-
-theorem whileLoop2_terminates_at_zero (N_val : Nat) (s_final : IMPState Identifier) :
-  BigStep (whileLoopProgram2 N_val) [] s_final ->
-  s_final.lookup Identifier.x = some N_val :=
-    by
-      intros h_big_step
-      cases h_big_step with
-        | bs_seq _ _ _ mid s' h_bs_assign h_bs_while =>
-          have mid_x_is_0 : mid.lookup Identifier.x = some 0 := assigning_sets_value Identifier.x [] mid 0 h_bs_assign
-          have zero_leq_N : 0 <= N_val := Nat.zero_le N_val
-          clear h_bs_assign
-          exact (whileLoopBase2_terminates_at_N 0 N_val mid s_final zero_leq_N mid_x_is_0 h_bs_while)
+#eval! (runBigStep (whileLoopProgram2 10) []).fst
