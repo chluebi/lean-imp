@@ -266,7 +266,7 @@ instance (α: Type) [BEq α] [Inhabited (IMPState α)] (p: IMPProgram α) (s_sta
   default := ⟨s_start, sorry⟩
 
 
-def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgram α) (s_start: IMPState α) :
+unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgram α) (s_start: IMPState α) :
   Σ' s_final : IMPState α, BigStep p s_start s_final :=
     by
       match p with
