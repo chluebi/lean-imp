@@ -16,19 +16,32 @@ inductive SmallStep {α: Type} [BEq α] : IMPProgram α → IMPState α → IMPS
   | ss_seq2 (p1 p2 p3 : IMPProgram α) (s s' : IMPState α) :
     SmallStep p1 s (IMPSmallStepState.ss_unfinished p3 s') ->
     SmallStep (IMPProgram.seq p1 p2) s (IMPSmallStepState.ss_unfinished (IMPProgram.seq p3 p2) s')
-  | ss_if_true (b_expr : BoolExpr α) (p_then p_else : IMPProgram α) (s s' : IMPState α) :
+  | ss_if_true (b_expr : BoolExpr α) (p_then p_else : IMPProgram α) (s : IMPState α) :
     (evalBoolExpr b_expr).run s = (true, s) ->
     SmallStep (IMPProgram.«if» b_expr p_then p_else) s (IMPSmallStepState.ss_unfinished p_then s)
-  | ss_if_false (b_expr : BoolExpr α) (p_then p_else : IMPProgram α) (s s' : IMPState α) :
+  | ss_if_false (b_expr : BoolExpr α) (p_then p_else : IMPProgram α) (s : IMPState α) :
     (evalBoolExpr b_expr).run s = (false, s) ->
     SmallStep (IMPProgram.«if» b_expr p_then p_else) s (IMPSmallStepState.ss_unfinished p_else s)
-  | ss_while (b_expr : BoolExpr α) (p_body : IMPProgram α) (s s1 s2 : IMPState α) :
-    (evalBoolExpr b_expr).run s = (true, s) ->
+  | ss_while (b_expr : BoolExpr α) (p_body : IMPProgram α) (s s1 : IMPState α) :
     SmallStep (IMPProgram.«while» b_expr p_body) s (
       IMPSmallStepState.ss_unfinished (
         (IMPProgram.«if» b_expr (
           IMPProgram.seq (p_body) (IMPProgram.«while» b_expr p_body)
         ) IMPProgram.skip)
       )
-      s
+      s1
     )
+
+notation "⟨" p:1 "," s:0 "⟩" " ->1 " s':0 => SmallStep p s (IMPSmallStepState.ss_finished s')
+notation "⟨" p:1 "," s:0 "⟩" " ->1 " "⟨" p':1 "," s':0 "⟩" => SmallStep p s (IMPSmallStepState.ss_unfinished p' s')
+
+inductive SmallStepSequence {α: Type} [BEq α] : IMPProgram α → IMPState α → IMPState α → Prop where
+  | single (p: IMPProgram α) (s s': IMPState α) :
+    SmallStep p s (IMPSmallStepState.ss_finished s') ->
+    SmallStepSequence p s s'
+  | cons (p1 p2: IMPProgram α) (s s' s'': IMPState α) :
+    SmallStep p1 s (IMPSmallStepState.ss_unfinished p2 s') ->
+    SmallStepSequence p2 s' s'' ->
+    SmallStepSequence p1 s s''
+
+notation "⟨" p:1 "," s:0 "⟩" " ->* " s':0 => SmallStepSequence p s s'
