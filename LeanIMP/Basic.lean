@@ -161,3 +161,19 @@ partial def IMPProgram.runProgramPartial {α: Type} [BEq α] : (IMPProgram α) �
 def IMPProgram.runPartial {α: Type} [BEq α] (program: IMPProgram α) (state: IMPState α) :=
   let (_, state) := (runProgramPartial program).run state |>.run
   state
+
+-- we are doing a lot of Monad computations so it is helpful to have simp have access to these
+attribute [simp] Bind.bind
+attribute [simp] Monad.toBind
+attribute [simp] StateT.pure
+attribute [simp] StateT.run
+attribute [simp] StateT.instMonad
+attribute [simp] StateT.bind
+attribute [simp] StateT.map
+attribute [simp] MonadState.get
+attribute [simp] getThe
+attribute [simp] MonadStateOf.get
+attribute [simp] StateT.get
+attribute [simp] set
+attribute [simp] StateT.set
+attribute [simp] Id.run
