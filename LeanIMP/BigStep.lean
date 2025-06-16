@@ -87,10 +87,6 @@ instance IMPProgramSetoid (α: Type) [BEq α] : Setoid (IMPProgram α) where
 def IMPProgramQ (α: Type) [BEq α] := Quotient (IMPProgramSetoid α)
 
 
-macro "simp_monad_and_expr" : tactic =>
-  `(tactic| simp [Bind.bind, Monad.toBind, StateT.pure, StateT.run, StateT.instMonad, StateT.bind, StateT.map, MonadState.get, getThe, MonadStateOf.get, StateT.get, set, StateT.set, Id.run, evalBoolExpr, evalNatExpr])
-
-
 theorem assigning_sets_value {α: Type} [BEq α] [ReflBEq α] (x: α) (s s_final: IMPState α) (N: Nat) :
   BigStep ((IMPProgram.assign x (NatExpr.const N))) s s_final ->
   s_final.lookup x = some N :=
@@ -213,9 +209,9 @@ def whileLoopBaseExists (s: IMPState Identifier) (N_val: Nat) :
           rotate_left
           unfold whileLoopBase
           refine bs_while_false (BoolExpr.gt (NatExpr.var Identifier.x) (NatExpr.const (0))) ?_ ?_ ?_
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
           rw [x_is_N_val]
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
         | succ n =>
           have s_mid_update : (s.update Identifier.x n).lookup Identifier.x = n := by
             unfold IMPState.update
@@ -225,14 +221,14 @@ def whileLoopBaseExists (s: IMPState Identifier) (N_val: Nat) :
           rotate_left
           refine bs_while_true (BoolExpr.gt (NatExpr.var Identifier.x) (NatExpr.const (0))) ?_ ?_ ?_ ?_ ?_ ?_ ?_
           rotate_left
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
           rw [x_is_N_val]
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
           refine bs_assign Identifier.x ?_ ?_ ?_ ?_
           exact n
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
           rw [x_is_N_val]
-          simp_monad_and_expr
+          simp [evalNatExpr, evalBoolExpr]
           rw [<- whileLoopBase]
           rotate_left
           exact ih.fst
@@ -253,7 +249,7 @@ def whileLoopBigStepExists (N_val : Nat) :
       refine bs_seq (IMPProgram.assign Identifier.x (NatExpr.const N_val)) ?_ ?_ ?_ ?_ ?_ ?_
       exact [(Identifier.x, N_val)]
       refine bs_assign Identifier.x ?_ ?_ ?_ ?_
-      simp_monad_and_expr
+      simp [evalNatExpr, evalBoolExpr]
       rotate_left
       exact baseLoop.fst
       exact baseLoop.snd
@@ -262,6 +258,8 @@ def whileLoopBigStepExists (N_val : Nat) :
 #eval (whileLoopBigStepExists 3).fst
 
 
+
+-- unsafe part, this allows us to "run" big step computations, even if non-termination is technically possible
 instance (α: Type) [BEq α] [Inhabited (IMPState α)] (p: IMPProgram α) (s_start: IMPState α) : Inhabited (Σ' s_final : IMPState α, BigStep p s_start s_final) where
   default := ⟨s_start, sorry⟩
 
@@ -276,7 +274,7 @@ unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgr
           let next_val := next.fst
           let next_state := s_start.update x next_val
           have next_is_next : (evalNatExpr expr).run s_start = (next_val, s_start) := by
-            simp_monad
+            simp [evalNatExpr, evalBoolExpr]
             rw [IMPState.eval_int_is_pure]
             rfl
           refine ⟨?s_final, ?_⟩
@@ -296,7 +294,7 @@ unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgr
               rw [IMPState.eval_bool_is_pure] at h
               let next := (evalBoolExpr bexpr).run s_start
               have next_is_next : (evalBoolExpr bexpr).run s_start = (true, s_start) := by
-                simp_monad
+                simp
                 rw [IMPState.eval_bool_is_pure]
                 injection h with h1 h2
                 congr
@@ -307,7 +305,7 @@ unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgr
               rw [IMPState.eval_bool_is_pure] at h
               let next := (evalBoolExpr bexpr).run s_start
               have next_is_next : (evalBoolExpr bexpr).run s_start = (false, s_start) := by
-                simp_monad
+                simp
                 rw [IMPState.eval_bool_is_pure]
                 injection h with h1 h2
                 congr
@@ -320,7 +318,7 @@ unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgr
               rw [IMPState.eval_bool_is_pure] at h
               let next := (evalBoolExpr bexpr).run s_start
               have next_is_next : (evalBoolExpr bexpr).run s_start = (true, s_start) := by
-                simp_monad
+                simp
                 rw [IMPState.eval_bool_is_pure]
                 injection h with h1 h2
                 congr
@@ -331,7 +329,7 @@ unsafe def runBigStep {α: Type} [inh: Inhabited α] [beq : BEq α] (p: IMPProgr
               rw [IMPState.eval_bool_is_pure] at h
               let next := (evalBoolExpr bexpr).run s_start
               have next_is_next : (evalBoolExpr bexpr).run s_start = (false, s_start) := by
-                simp_monad
+                simp
                 rw [IMPState.eval_bool_is_pure]
                 injection h with h1 h2
                 congr

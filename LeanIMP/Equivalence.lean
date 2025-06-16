@@ -123,7 +123,7 @@ theorem small_step_implies_big_step {α: Type} [BEq α] :
               rw [Nat.add_comm]
               exact Nat.lt_add_one k_
             have rest_tree := ih k_ k_less (IMPProgram.if b_expr (pbody.seq (IMPProgram.while b_expr pbody)) IMPProgram.skip) s s' rest
-            cases eval_bool: ((evalBoolExpr b_expr).run s).fst with
+            cases eval_bool: ((evalBoolExpr b_expr) s).fst with
               | true =>
                 let rest_tree2 := rest_tree
                 cases rest_tree with
