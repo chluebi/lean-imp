@@ -3,5 +3,5 @@ import LeanIMP.BigStep
 import LeanIMP.Equivalence
 
 unsafe def main : IO Unit :=
-  let x := (runBigStep (whileLoopProgram2 10) []).snd
-  IO.println s!"Hello, world!"
+  let ⟨result, proof⟩ := (runBigStep (whileLoopProgram2 10) [])
+  IO.println s!"Successfully ran program! Result x: {result.head!.snd}"

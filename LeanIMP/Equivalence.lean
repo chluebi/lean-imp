@@ -157,3 +157,10 @@ theorem small_step_implies_big_step {α: Type} [BEq α] {p: IMPProgram α} {s s'
                   | bs_if_false b_expr pthen pelse s s' eval subtree =>
                     cases subtree with
                     | bs_skip s_new => exact BigStep.bs_while_false b_expr pbody s eval
+
+
+-- this holds due to proof irrelevance
+theorem is_bijection {α: Type} [BEq α] (p: IMPProgram α) (s s': IMPState α) :
+  (fun x: BigStep p s s' => small_step_implies_big_step (big_step_implies_small_step x)) = id :=
+  by
+    rfl
