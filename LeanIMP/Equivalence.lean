@@ -51,12 +51,14 @@ theorem big_step_implies_small_step {α: Type} [BEq α] {p: IMPProgram α} {s s'
 
 
 
-theorem small_step_implies_big_step {α: Type} [BEq α] :
-  ∀k: Nat, ∀p: IMPProgram α, ∀s s': IMPState α, SmallStepSequence p s s' k ->
+theorem small_step_implies_big_step {α: Type} [BEq α] {p: IMPProgram α} {s s': IMPState α}
+  (small_step : ∃k: Nat, SmallStepSequence p s s' k) :
   BigStep p s s' :=
   by
-    intros k
-    refine strong_induction_on (fun x => ∀p: IMPProgram α, ∀s s': IMPState α, SmallStepSequence p s s' x -> BigStep p s s') k ?_
+    obtain ⟨k, small_step⟩ := small_step
+    revert small_step
+    revert s s' p
+    refine strong_induction_on (fun x => ∀{p: IMPProgram α}, ∀{s s': IMPState α}, SmallStepSequence p s s' x -> BigStep p s s') k ?_
     simp
     intros n
     intros ih
@@ -79,11 +81,11 @@ theorem small_step_implies_big_step {α: Type} [BEq α] :
               rw [Nat.add_comm]
               apply Nat.succ_lt_succ
               exact zero_lt_k
-            exact ih 1 one_less p1 s s'_ (SmallStepSequence.single p1 s s'_ ih_finished)
+            exact ih 1 one_less (SmallStepSequence.single p1 s s'_ ih_finished)
             have k_less : k_ < 1 + k_ := by
               rw [Nat.add_comm]
               exact Nat.lt_add_one k_
-            exact ih k_ k_less p2 s'_ s' rest
+            exact ih k_ k_less rest
           | ss_seq2 p1 p2 p3 s__ s'__ ih_unfinished =>
             have ⟨k1_, k2_, inbetween, ⟨⟨step1, step2⟩, arith⟩⟩ := small_step_sequence_seperable (1 + k_) p1 p2 s s' small_step2
             have k1_gt_zero : k1_ > 0 := small_step_sequence_gt_zero step1
@@ -98,10 +100,10 @@ theorem small_step_implies_big_step {α: Type} [BEq α] :
               refine Nat.lt_add_of_pos_right ?_
               exact k1_gt_zero
 
-            have step1_ih := ih k1_ k1_lt_1_plus_k_ p1 s inbetween step1
-            have step2_ih := ih k2_ k2_lt_1_plus_k_ p2 inbetween s' step2
+            have step1_ih := ih k1_ k1_lt_1_plus_k_ step1
+            have step2_ih := ih k2_ k2_lt_1_plus_k_ step2
             exact
-              BigStep.bs_seq p1 p2 s inbetween s' (ih k1_ k1_lt_1_plus_k_ p1 s inbetween step1)
+              BigStep.bs_seq p1 p2 s inbetween s' (ih k1_ k1_lt_1_plus_k_ step1)
                 step2_ih
 
           | ss_if_true b_expr p2 p_else s eval =>
@@ -109,20 +111,20 @@ theorem small_step_implies_big_step {α: Type} [BEq α] :
               rw [Nat.add_comm]
               exact Nat.lt_add_one k_
             refine BigStep.bs_if_true b_expr p2 p_else s s' eval ?subtree
-            exact ih k_ k_less p2 s s' rest
+            exact ih k_ k_less rest
 
           | ss_if_false b_expr pthen p2 s eval =>
             have k_less : k_ < 1 + k_ := by
               rw [Nat.add_comm]
               exact Nat.lt_add_one k_
             refine BigStep.bs_if_false b_expr pthen p2 s s' eval ?subtree2
-            exact ih k_ k_less p2 s s' rest
+            exact ih k_ k_less rest
 
           | ss_while b_expr pbody s =>
             have k_less : k_ < 1 + k_ := by
               rw [Nat.add_comm]
               exact Nat.lt_add_one k_
-            have rest_tree := ih k_ k_less (IMPProgram.if b_expr (pbody.seq (IMPProgram.while b_expr pbody)) IMPProgram.skip) s s' rest
+            have rest_tree := ih k_ k_less rest
             cases eval_bool: ((evalBoolExpr b_expr) s).fst with
               | true =>
                 let rest_tree2 := rest_tree
